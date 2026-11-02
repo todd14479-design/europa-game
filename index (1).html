@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Европа: гравитационный манёвр</title>
+  <style>
+:root {
+  --bg: #0b1020; --panel: #141b33; --card: #1b2442; --line: #2a3560;
+  --text: #e8ecff; --muted: #9aa6d6; --accent: #4da3ff; --good: #4ade80;
+  --bad: #ff6b6b; --warn: #fbbf24;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { padding-bottom: env(safe-area-inset-bottom); overflow-x: hidden; }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 16px; margin: 18px 0 8px; color: var(--accent); }
+.top { padding: 10px 12px 6px; position: sticky; top: 0; z-index: 5;
+  background: linear-gradient(var(--bg) 80%, transparent); }
+.goal { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.goal b { color: var(--text); }
+.layout { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 0 12px 24px; max-width: 1200px; margin: 0 auto; }
+@media (min-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+  .stage { position: sticky; top: 76px; }
+}
+.canvas-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 78vh;
+  background: radial-gradient(circle at 50% 50%, #10183a, #070a18); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; touch-action: manipulation; }
+canvas { width: 100%; height: 100%; display: block; }
+.hud { position: absolute; left: 8px; top: 8px; font-size: 12px; background: rgba(8,12,30,.72);
+  border-radius: 8px; padding: 6px 8px; pointer-events: none; line-height: 1.5; }
+.controls-row, .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.btn { min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font-size: 15px; cursor: pointer; }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--accent); color: #05122b; border-color: var(--accent); font-weight: 600; }
+.btn:disabled { opacity: .45; }
+.btn.wide { width: 100%; margin-top: 8px; }
+.btn.small { min-height: 40px; min-width: 40px; padding: 4px 10px; }
+.speed { display: block; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.speed input { width: 100%; }
+.log { margin-top: 10px; max-height: 150px; overflow-y: auto; font-size: 13px; color: var(--muted); }
+.log div { padding: 3px 0; border-bottom: 1px solid var(--line); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px 16px; min-width: 0; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; }
+.tab { flex: 1; min-height: 44px; border: 0; background: transparent; color: var(--muted);
+  font-size: 15px; border-bottom: 2px solid transparent; cursor: pointer; }
+.tab.active { color: var(--text); border-color: var(--accent); }
+.tabpage { display: none; }
+.tabpage.active { display: block; }
+.seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.seg button, .opt { min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 6px 8px; font-size: 14px; cursor: pointer; text-align: left; }
+.seg button.on, .opt.on { border-color: var(--accent); background: #1f3a66; }
+.note { font-size: 13px; color: var(--muted); margin: 6px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+.card.bad { border-color: var(--bad); }
+.card .head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.card .head b { flex: 1; }
+.lbl { font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+.opts { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+.opt .sub { display: block; font-size: 12px; color: var(--muted); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+input[type=range] { width: 100%; height: 32px; accent-color: var(--accent); }
+.res { font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); }
+.res b { color: var(--text); }
+.err { color: var(--bad); }
+.ok { color: var(--good); }
+.hidden { display: none !important; }
+.presets .opt { display: block; width: 100%; margin-top: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+td.best { color: var(--good); font-weight: 600; }
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+.bar { height: 10px; border-radius: 6px; background: #0e1530; overflow: hidden; margin: 4px 0 2px; }
+.bar i { display: block; height: 100%; background: var(--good); }
+.bar i.over { background: var(--bad); }
+.crit { margin: 10px 0; font-size: 14px; }
+.score { font-size: 40px; font-weight: 700; }
+.verdict { font-size: 18px; font-weight: 600; }
+.diag { width: 100%; height: 190px; background: #0e1530; border-radius: 10px; margin-top: 8px; }
+.modal { position: fixed; inset: 0; background: rgba(3,6,18,.82); display: flex; align-items: center;
+  justify-content: center; padding: 14px; z-index: 20; }
+.modal-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+  max-width: 460px; width: 100%; max-height: 90vh; overflow-y: auto; }
+.modal-card h2 { margin-top: 0; font-size: 20px; color: var(--text); }
+.modal-card ul { padding-left: 18px; margin: 8px 0; }
+.modal-card .row .btn { flex: 1; }
+
+</style>
+</head>
+<body>
+  <header class="top">
+    <h1>Курс на Европу</h1>
+    <div class="goal" id="goalBar"></div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="canvas-wrap">
+        <canvas id="view"></canvas>
+        <div class="hud" id="hud"></div>
+      </div>
+      <div class="controls-row">
+        <button id="btnRun" class="btn primary">▶ Запустить</button>
+        <button id="btnStop" class="btn" disabled>■ Стоп</button>
+        <button id="btnView" class="btn">Вид: спутники</button>
+      </div>
+      <label class="speed">Скорость анимации
+        <input type="range" id="speed" min="1" max="10" value="5">
+      </label>
+      <div class="log" id="log" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <nav class="tabs">
+        <button class="tab active" data-tab="plan">План</button>
+        <button class="tab" data-tab="result">Итог</button>
+        <button class="tab" data-tab="compare">Сравнение</button>
+        <button class="tab" data-tab="help">Правила</button>
+      </nav>
+
+      <div class="tabpage active" id="tab-plan">
+        <h2>1. Стартовая орбита</h2>
+        <div id="startList" class="seg"></div>
+        <p class="note" id="startInfo"></p>
+
+        <h2>2. Пролёты (по порядку)</h2>
+        <div id="steps"></div>
+        <button id="btnAdd" class="btn wide">+ Добавить пролёт</button>
+
+        <h2>3. Финал: захват у Европы</h2>
+        <div id="finalCard" class="card"></div>
+
+        <div class="row">
+          <button id="btnPresets" class="btn">Готовые маршруты</button>
+          <button id="btnReset" class="btn">Сбросить</button>
+        </div>
+        <div id="presetBox" class="presets hidden"></div>
+      </div>
+
+      <div class="tabpage" id="tab-result">
+        <div id="resultBox"></div>
+      </div>
+
+      <div class="tabpage" id="tab-compare">
+        <p class="note">Сохраняйте разные маршруты и сравнивайте их по Δv, радиации, времени и оценке.</p>
+        <button id="btnSave" class="btn wide primary">Сохранить текущий маршрут</button>
+        <div id="compareBox"></div>
+      </div>
+
+      <div class="tabpage" id="tab-help">
+        <div id="helpBox"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="modal"><div class="modal-card" id="modalCard"></div></div>
+
+  <script>
+/* physics.js — физическая модель игры «Европа: гравитационный манёвр».
+ *
+ * Модель «сопряжённых конических сечений» (patched conics), плоская (2D):
+ *  1) вне окрестности спутника КА летит по эллипсу вокруг Юпитера (законы Кеплера);
+ *  2) пролёт у спутника считается в системе спутника: скорость относительно спутника
+ *     (v∞) по модулю не меняется, но поворачивается на угол δ = 2·asin(1/(1 + rп·v∞²/μ));
+ *  3) после пролёта скорость в системе Юпитера = V_спутника + повёрнутый v∞.
+ *
+ * Допущение: нужную фазу спутника на орбите подгоняют небольшими коррекциями
+ * (в игре — фиксированная плата TRIM_DV за каждую встречу).
+ */
+(function (root) {
+  'use strict';
+
+  const MU_J = 1.26687e8;        // GM Юпитера, км³/с²
+  const RJ = 71492;              // радиус Юпитера, км
+  const TWO_PI = Math.PI * 2;
+
+  // Галилеевы спутники (круговые компланарные орбиты)
+  const MOONS = [
+    { id: 'io',       name: 'Ио',       a: 421700,  mu: 5959.9, R: 1821.6, color: '#f2c14e' },
+    { id: 'europa',   name: 'Европа',   a: 671100,  mu: 3202.7, R: 1560.8, color: '#7fd4ff' },
+    { id: 'ganymede', name: 'Ганимед',  a: 1070400, mu: 9887.8, R: 2634.1, color: '#c9b8a8' },
+    { id: 'callisto', name: 'Каллисто', a: 1882700, mu: 7179.3, R: 2410.3, color: '#9a8d86' }
+  ];
+  MOONS.forEach(function (m) {
+    m.V = Math.sqrt(MU_J / m.a);       // орбитальная скорость, км/с
+    m.n = m.V / m.a;                   // угловая скорость, рад/с
+    m.rRJ = m.a / RJ;
+  });
+  const MOON_BY_ID = {};
+  MOONS.forEach(function (m) { MOON_BY_ID[m.id] = m; });
+
+  // Стартовые орбиты вокруг Юпитера (после торможения у Юпитера). Старт — в апоцентре.
+  const START_ORBITS = [
+    { id: 'far',    name: 'Дальняя',    rp: 23, ra: 120, info: 'Спокойный старт: первая встреча — с Каллисто.' },
+    { id: 'wide',   name: 'Широкая',    rp: 20, ra: 200, info: 'Долгий период, зато большая скорость у Каллисто.' },
+    { id: 'inner',  name: 'Ближняя',    rp: 12, ra: 100, info: 'Орбита уже пересекает Ганимед и Каллисто.' },
+    { id: 'direct', name: 'Прямая',     rp: 8,  ra: 60,  info: 'Пересекает Европу сразу, но на огромной скорости.' }
+  ];
+
+  // Параметры баланса и критериев
+  const SETTINGS = {
+    TRIM_DV: 0.02,        // км/с — коррекция фазы на каждую встречу
+    MIN_ALT: 25,          // км — минимальная безопасная высота пролёта
+    MAX_ALT: 1500,        // км
+    MAX_STEPS: 8,         // максимум промежуточных пролётов
+    MIN_PERIAPSIS_RJ: 1.3,// ниже — падение в атмосферу/в радиационный пояс Юпитера
+    ELL_APO_KM: 6000,     // апоцентр эллиптической орбиты захвата у Европы, км
+    FLYBY_DAYS: 0.3,      // сколько суток «в зоне спутника» при пролёте (для дозы)
+    DOSE0: 40,            // крад/сутки на расстоянии 6 RJ
+    DOSE_SCALE: 2.2,      // RJ — масштаб спада радиации с расстоянием
+    LIMITS: { dv: 1.6, dose: 100, days: 600 }  // бюджет Δv (км/с), доза (крад), время (сут)
+  };
+
+  function doseRate(rKm) {                 // крад/сутки
+    return SETTINGS.DOSE0 * Math.exp(-(rKm / RJ - 6) / SETTINGS.DOSE_SCALE);
+  }
+
+  function mod2pi(x) {
+    x = x % TWO_PI;
+    return x < 0 ? x + TWO_PI : x;
+  }
+
+  // ---------- Кеплер ----------
+  function makeOrbit(a, e, w) {
+    const p = a * (1 - e * e);
+    return {
+      a: a, e: e, w: w, p: p,
+      h: Math.sqrt(MU_J * p),
+      rp: a * (1 - e), ra: a * (1 + e),
+      n: Math.sqrt(MU_J / (a * a * a)),
+      period: TWO_PI * Math.sqrt(a * a * a / MU_J) // секунды
+    };
+  }
+
+  // Орбита по вектору состояния (положение км, скорость км/с)
+  function orbitFromState(x, y, vx, vy) {
+    const r = Math.hypot(x, y);
+    const v2 = vx * vx + vy * vy;
+    const eps = v2 / 2 - MU_J / r;
+    if (eps >= 0) return { ok: false, reason: 'escape' };
+    const h = x * vy - y * vx;
+    if (h <= 0) return { ok: false, reason: 'retro' };
+    const a = -MU_J / (2 * eps);
+    const rv = x * vx + y * vy;
+    const k = (v2 - MU_J / r) / MU_J;
+    const ex = k * x - rv * vx / MU_J;
+    const ey = k * y - rv * vy / MU_J;
+    const e = Math.hypot(ex, ey);
+    if (e < 1e-4) return { ok: false, reason: 'circular' };
+    const o = makeOrbit(a, e, Math.atan2(ey, ex));
+    o.ok = true;
+    return o;
+  }
+
+  function eccFromNu(e, nu) {            // nu ∈ [0, 2π)
+    return mod2pi(2 * Math.atan2(Math.sqrt(1 - e) * Math.sin(nu / 2),
+                                 Math.sqrt(1 + e) * Math.cos(nu / 2)));
+  }
+  function nuFromEcc(e, E) {
+    return mod2pi(2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2),
+                                 Math.sqrt(1 - e) * Math.cos(E / 2)));
+  }
+  function meanFromEcc(e, E) { return E - e * Math.sin(E); }
+
+  function solveKepler(M, e) {
+    M = mod2pi(M);
+    let E = e < 0.8 ? M : Math.PI;
+    for (let i = 0; i < 40; i++) {
+      const f = E - e * Math.sin(E) - M;
+      const d = f / (1 - e * Math.cos(E));
+      E -= d;
+      if (Math.abs(d) < 1e-12) break;
+    }
+    return E;
+  }
+
+  // Истинная аномалия в точке пересечения орбиты со сферой радиуса rT
+  function nuAtRadius(orb, rT, enc) {
+    if (rT < orb.rp * (1 - 1e-9) || rT > orb.ra * (1 + 1e-9)) return null;
+    let c = (orb.p / rT - 1) / orb.e;
+    c = Math.max(-1, Math.min(1, c));
+    const nu0 = Math.acos(c);
+    return enc === 'out' ? nu0 : mod2pi(TWO_PI - nu0);
+  }
+
+  function stateAtNu(orb, nu) {
+    const r = orb.p / (1 + orb.e * Math.cos(nu));
+    const phi = orb.w + nu;
+    const vr = MU_J / orb.h * orb.e * Math.sin(nu);
+    const vt = orb.h / r;
+    const c = Math.cos(phi), s = Math.sin(phi);
+    return { r: r, phi: phi, x: r * c, y: r * s, vr: vr, vt: vt,
+             vx: vr * c - vt * s, vy: vr * s + vt * c };
+  }
+
+  // Положение на орбите по времени от начала перелёта (сек)
+  function posOnLeg(leg, tSec) {
+    const o = leg.orb;
+    const M = leg.M0 + o.n * tSec;
+    const E = solveKepler(M, o.e);
+    const r = o.a * (1 - o.e * Math.cos(E));
+    const nu = nuFromEcc(o.e, E);
+    const phi = o.w + nu;
+    const sp = Math.sqrt(MU_J * (2 / r - 1 / o.a));
+    return { x: r * Math.cos(phi), y: r * Math.sin(phi), r: r, speed: sp, phi: phi };
+  }
+
+  // Доза радиации на перелёте (интеграл по эксцентрической аномалии)
+  function computeLegDose(orb, E0, dE) {
+    const N = 1200;
+    let sum = 0;
+    for (let i = 0; i < N; i++) {
+      const E = E0 + dE * (i + 0.5) / N;
+      const r = orb.a * (1 - orb.e * Math.cos(E));
+      const dt = (1 - orb.e * Math.cos(E)) / orb.n * (dE / N) / 86400; // сутки
+      sum += doseRate(r) * dt;
+    }
+    return sum;
+  }
+
+  // ---------- Гравитационный манёвр ----------
+  // st: {x,y,vx,vy} на радиусе орбиты спутника; возвращает оба варианта стороны пролёта.
+  function flybyOptions(st, moon, alt) {
+    const phi = Math.atan2(st.y, st.x);
+    const Vx = -moon.V * Math.sin(phi), Vy = moon.V * Math.cos(phi);
+    const ux = st.vx - Vx, uy = st.vy - Vy;
+    const vinf = Math.hypot(ux, uy);
+    const rpf = moon.R + alt;
+    const eh = 1 + rpf * vinf * vinf / moon.mu;
+    const delta = 2 * Math.asin(1 / eh);
+    const vBefore = Math.hypot(st.vx, st.vy);
+    // Какой знак поворота соответствует пролёту «сзади» спутника (по его движению)?
+    const cj = (-uy * (-Math.sin(phi)) + ux * Math.cos(phi)) / vinf;
+    const trailSign = cj >= 0 ? 1 : -1;
+    function make(sign, label) {
+      const a = sign * delta, c = Math.cos(a), s = Math.sin(a);
+      const ox = ux * c - uy * s, oy = ux * s + uy * c;
+      const vx = Vx + ox, vy = Vy + oy;
+      return { side: label, sign: sign, vx: vx, vy: vy, vBefore: vBefore,
+               vAfter: Math.hypot(vx, vy), dSpeed: Math.hypot(vx, vy) - vBefore,
+               u_in: [ux, uy], u_out: [ox, oy] };
+    }
+    return {
+      vinf: vinf, delta: delta, rpf: rpf, V: [Vx, Vy], vIn: [st.vx, st.vy], phi: phi,
+      trail: make(trailSign, 'trail'),
+      lead: make(-trailSign, 'lead')
+    };
+  }
+
+  // Захват у Европы: Δv торможения до орбиты вокруг спутника
+  function captureDv(st, moon, alt, kind) {
+    const phi = Math.atan2(st.y, st.x);
+    const Vx = -moon.V * Math.sin(phi), Vy = moon.V * Math.cos(phi);
+    const vinf = Math.hypot(st.vx - Vx, st.vy - Vy);
+    const rpE = moon.R + alt;
+    const vHyp = Math.sqrt(vinf * vinf + 2 * moon.mu / rpE);
+    let e = 0;
+    if (kind === 'ell') {
+      const ra = SETTINGS.ELL_APO_KM;
+      e = (ra - rpE) / (ra + rpE);
+    }
+    const vOrb = Math.sqrt(moon.mu * (1 + e) / rpE);
+    return { vinf: vinf, vHyp: vHyp, vOrb: vOrb, dv: vHyp - vOrb, e: e, rpE: rpE };
+  }
+
+  // ---------- Моделирование маршрута ----------
+  /* plan = {
+   *   start: 'far' | ...,
+   *   steps: [{ moon, enc: 'in'|'out', side: 'trail'|'lead', alt }],
+   *   final: { enc: 'in'|'out', alt, kind: 'circ'|'ell' }   // захват у Европы
+   * }
+   */
+  function simulate(plan) {
+    const res = {
+      ok: false, captured: false, fail: null, failStep: -1,
+      steps: [], legs: [], totals: null
+    };
+    const so = START_ORBITS.filter(function (s) { return s.id === plan.start; })[0] || START_ORBITS[0];
+    const rp = so.rp * RJ, ra = so.ra * RJ;
+    let orb = makeOrbit((rp + ra) / 2, (ra - rp) / (ra + rp), 0);
+    res.startOrbit = orb;
+    let nuCur = Math.PI;                  // старт в апоцентре
+    let tDays = 0, dose = 0, dvTrim = 0;
+
+    const all = plan.steps.slice();
+    all.push({ moon: 'europa', enc: plan.final.enc, alt: plan.final.alt, isFinal: true });
+
+    for (let i = 0; i < all.length; i++) {
+      const sp = all[i];
+      const moon = MOON_BY_ID[sp.moon];
+      const nuT = nuAtRadius(orb, moon.a, sp.enc);
+      if (nuT === null) {
+        res.fail = {
+          code: 'unreachable', step: i, moon: moon,
+          rp: orb.rp, ra: orb.ra
+        };
+        res.failStep = i;
+        break;
+      }
+      // перелёт до встречи
+      const E0 = eccFromNu(orb.e, nuCur);
+      const E1 = eccFromNu(orb.e, nuT);
+      let dE = E1 - E0;
+      if (dE <= 1e-10) dE += TWO_PI;
+      const dM = dE - orb.e * (Math.sin(E1) - Math.sin(E0));
+      const dtSec = dM / orb.n;
+      const legDays = dtSec / 86400;
+      const legDoseVal = computeLegDose(orb, E0, dE);
+      const M0 = meanFromEcc(orb.e, E0);
+      res.legs.push({
+        orb: orb, M0: M0, t0: tDays, t1: tDays + legDays, dtSec: dtSec,
+        nu0: nuCur, nu1: nuT, E0: E0, dE: dE, moon: moon, enc: sp.enc
+      });
+      tDays += legDays;
+      dose += legDoseVal;
+      dvTrim += SETTINGS.TRIM_DV;
+
+      const st = stateAtNu(orb, nuT);
+      const rec = {
+        index: i, isFinal: !!sp.isFinal, moon: moon, enc: sp.enc, alt: sp.alt,
+        day: tDays, legDays: legDays, legDose: legDoseVal,
+        orbBefore: { rp: orb.rp, ra: orb.ra, period: orb.period / 86400 },
+        phi: st.phi, rMoonRJ: moon.rRJ
+      };
+
+      if (sp.isFinal) {
+        const cap = captureDv(st, moon, sp.alt, plan.final.kind);
+        rec.vinf = cap.vinf;
+        rec.capture = cap;
+        rec.vBefore = Math.hypot(st.vx, st.vy);
+        const fd = SETTINGS.FLYBY_DAYS;
+        const fdose = doseRate(moon.a) * fd;
+        dose += fdose; rec.legDose += fdose;
+        res.steps.push(rec);
+        res.captured = true;
+        res.eoi = cap;
+        break;
+      }
+
+      const opt = flybyOptions(st, moon, sp.alt);
+      const ch = sp.side === 'lead' ? opt.lead : opt.trail;
+      rec.vinf = opt.vinf;
+      rec.turnDeg = opt.delta * 180 / Math.PI;
+      rec.side = ch.side;
+      rec.vBefore = ch.vBefore; rec.vAfter = ch.vAfter; rec.dSpeed = ch.dSpeed;
+      rec.options = { trail: opt.trail.dSpeed, lead: opt.lead.dSpeed };
+      rec.vec = { V: opt.V, vIn: opt.vIn, vOut: [ch.vx, ch.vy], uIn: ch.u_in, uOut: ch.u_out };
+      const fdose = doseRate(moon.a) * SETTINGS.FLYBY_DAYS;
+      dose += fdose; rec.legDose += fdose;
+
+      const no = orbitFromState(st.x, st.y, ch.vx, ch.vy);
+      if (!no.ok) {
+        res.steps.push(rec);
+        res.fail = { code: no.reason, step: i, moon: moon };
+        res.failStep = i;
+        break;
+      }
+      if (no.rp < SETTINGS.MIN_PERIAPSIS_RJ * RJ) {
+        rec.orbAfter = { rp: no.rp, ra: no.ra, period: no.period / 86400 };
+        res.steps.push(rec);
+        res.fail = { code: 'jupiter', step: i, moon: moon, rp: no.rp };
+        res.failStep = i;
+        break;
+      }
+      rec.orbAfter = { rp: no.rp, ra: no.ra, period: no.period / 86400 };
+      res.steps.push(rec);
+      orb = no;
+      nuCur = mod2pi(Math.atan2(st.y, st.x) - no.w);
+    }
+
+    const dvEOI = res.captured ? res.eoi.dv : 0;
+    res.totals = {
+      days: tDays, dose: dose, dvTrim: dvTrim, dvEOI: dvEOI,
+      dv: dvTrim + dvEOI, flybys: res.steps.filter(function (s) { return !s.isFinal; }).length
+    };
+    res.ok = res.captured;
+    evaluate(res);
+    return res;
+  }
+
+  // ---------- Критерии успеха и оценка ----------
+  function evaluate(res) {
+    const L = SETTINGS.LIMITS, T = res.totals;
+    const crit = {
+      dv:   { value: T.dv,   limit: L.dv,   pass: res.captured && T.dv <= L.dv },
+      dose: { value: T.dose, limit: L.dose, pass: res.captured && T.dose <= L.dose },
+      days: { value: T.days, limit: L.days, pass: res.captured && T.days <= L.days }
+    };
+    res.criteria = crit;
+    res.success = res.captured && crit.dv.pass && crit.dose.pass && crit.days.pass;
+    function margin(c) { return Math.max(0, Math.min(1, 1 - c.value / c.limit)); }
+    res.score = res.captured
+      ? Math.round(100 * (0.45 * margin(crit.dv) + 0.3 * margin(crit.dose) + 0.25 * margin(crit.days)) * (res.success ? 1 : 0.4))
+      : 0;
+    res.hints = makeHints(res);
+  }
+
+  function fmt(x, d) { return Number(x).toFixed(d); }
+
+  function makeHints(res) {
+    const hints = [];
+    const L = SETTINGS.LIMITS;
+    if (res.fail) {
+      const f = res.fail;
+      if (f.code === 'unreachable') {
+        hints.push('Орбита КА между ' + fmt(f.rp / RJ, 1) + ' и ' + fmt(f.ra / RJ, 1) +
+          ' RJ не пересекает орбиту спутника «' + f.moon.name + '» (' + fmt(f.moon.rRJ, 1) +
+          ' RJ). Поставьте перед этим пролёт, который изменит орбиту (например, пролёт «спереди» у Ганимеда или Каллисто понижает перицентр).');
+      } else if (f.code === 'escape') {
+        hints.push('После пролёта у «' + f.moon.name + '» аппарат получил слишком много энергии и покинул систему Юпитера. Выберите сторону «спереди» или большую высоту.');
+      } else if (f.code === 'retro') {
+        hints.push('Орбита стала обратной — манёвр нереалистичен. Уменьшите поворот (больше высота).');
+      } else if (f.code === 'circular') {
+        hints.push('Орбита стала почти круговой: встреча по этой модели невозможна. Измените высоту пролёта.');
+      } else if (f.code === 'jupiter') {
+        hints.push('После пролёта у «' + f.moon.name + '» перицентр ' + fmt(f.rp / RJ, 2) +
+          ' RJ — аппарат упал бы в атмосферу Юпитера или сгорел в радиации.');
+      }
+      return hints;
+    }
+    const eoi = res.eoi;
+    if (eoi.vinf > 3) {
+      hints.push('У Европы скорость подлёта v∞ = ' + fmt(eoi.vinf, 2) +
+        ' км/с — слишком велика. Нужны пролёты «спереди» у Ганимеда/Каллисто, чтобы понизить энергию орбиты, и подход к Европе вблизи перицентра.');
+    }
+    if (!res.criteria.dv.pass) {
+      hints.push('Суммарное Δv ' + fmt(res.totals.dv, 2) + ' км/с превышает бюджет ' + fmt(L.dv, 2) +
+        ' км/с (торможение у Европы: ' + fmt(res.totals.dvEOI, 2) + ' км/с).');
+    }
+    if (!res.criteria.dose.pass) {
+      hints.push('Доза радиации ' + fmt(res.totals.dose, 0) + ' крад превышает ' + L.dose +
+        ' крад. Меньше витков вблизи Ио и Европы, меньше пролётов у Ио.');
+    }
+    if (!res.criteria.days.pass) {
+      hints.push('Время полёта ' + fmt(res.totals.days, 0) + ' сут. больше лимита ' + L.days +
+        ' сут. Берите стартовую орбиту с меньшим апоцентром или меньше «долгих» витков.');
+    }
+    return hints;
+  }
+
+  // Положение КА в момент времени tDays (для анимации)
+  function stateAtTime(res, tDays) {
+    const legs = res.legs;
+    if (!legs.length) return null;
+    let leg = legs[legs.length - 1];
+    for (let i = 0; i < legs.length; i++) {
+      if (tDays <= legs[i].t1) { leg = legs[i]; break; }
+    }
+    const t = Math.max(0, Math.min(tDays, leg.t1) - leg.t0) * 86400;
+    const p = posOnLeg(leg, t);
+    p.leg = legs.indexOf(leg);
+    return p;
+  }
+
+  // Точки траектории для рисования
+  function samplePath(res, perLeg) {
+    const out = [];
+    res.legs.forEach(function (leg, li) {
+      const pts = [];
+      const N = perLeg || 220;
+      for (let i = 0; i <= N; i++) {
+        const E = leg.E0 + leg.dE * i / N;
+        const r = leg.orb.a * (1 - leg.orb.e * Math.cos(E));
+        const nu = nuFromEcc(leg.orb.e, E);
+        const phi = leg.orb.w + nu;
+        pts.push([r * Math.cos(phi), r * Math.sin(phi)]);
+      }
+      out.push(pts);
+    });
+    return out;
+  }
+
+  const api = {
+    MU_J: MU_J, RJ: RJ, MOONS: MOONS, MOON_BY_ID: MOON_BY_ID,
+    START_ORBITS: START_ORBITS, SETTINGS: SETTINGS,
+    simulate: simulate, stateAtTime: stateAtTime, samplePath: samplePath,
+    doseRate: doseRate
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.Physics = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
+/* app.js — интерфейс игры «Курс на Европу».
+ * Физика лежит в physics.js (объект window.Physics). Здесь: состояние плана,
+ * построение интерфейса, рисование на canvas, анимация, сравнение маршрутов.
+ */
+(function () {
+  'use strict';
+  const P = window.Physics;
+  const S = P.SETTINGS, RJ = P.RJ, L = S.LIMITS;
+  const $ = function (id) { return document.getElementById(id); };
+  const fx = function (x, d) { return Number(x).toFixed(d); };
+
+  const ENC_LABEL = { in: 'На спуске к Юпитеру', out: 'На подъёме от перицентра' };
+  const SIDE_LABEL = { trail: 'Сзади спутника', lead: 'Спереди спутника' };
+  const KIND_LABEL = { circ: 'Круговая 100 км', ell: 'Эллиптическая (до 6000 км)' };
+  const FAIL_TITLE = {
+    unreachable: 'Не удалось встретить спутник', escape: 'Аппарат покинул систему Юпитера',
+    retro: 'Орбита стала обратной', circular: 'Орбита стала круговой',
+    jupiter: 'Аппарат упал на Юпитер'
+  };
+
+  function defaultPlan() {
+    return { start: 'far', steps: [{ moon: 'callisto', enc: 'in', side: 'lead', alt: 300 }],
+             final: { enc: 'in', alt: 100, kind: 'ell' } };
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function S_(m, e, s, a) { return { moon: m, enc: e, side: s, alt: a }; }
+
+  // Готовые варианты полёта (для сравнения)
+  const PRESETS = [
+    { name: 'Прямо к Европе (без манёвров)', desc: 'Для контраста: огромная скорость подлёта, огромное Δv.',
+      plan: { start: 'direct', steps: [], final: { enc: 'in', alt: 100, kind: 'ell' } } },
+    { name: 'Только Каллисто → Европа', desc: 'Один манёвр: орбита не успевает опуститься до Европы.',
+      plan: { start: 'inner', steps: [S_('callisto', 'in', 'lead', 300)], final: { enc: 'in', alt: 100, kind: 'ell' } } },
+    { name: 'Каллисто ×2 → Ганимед ×3 → Европа', desc: 'Цепочка «спереди»: каждый пролёт отнимает энергию. Проходит по всем критериям.',
+      plan: { start: 'wide', steps: [S_('callisto', 'out', 'lead', 300), S_('callisto', 'out', 'lead', 300), S_('ganymede', 'in', 'lead', 300),
+        S_('ganymede', 'in', 'lead', 25), S_('ganymede', 'in', 'lead', 1000)], final: { enc: 'out', alt: 100, kind: 'ell' } } },
+    { name: 'Вариант с экономией Δv', desc: 'Та же идея, другие стороны встречи — меньше топлива и времени.',
+      plan: { start: 'wide', steps: [S_('callisto', 'in', 'lead', 300), S_('callisto', 'out', 'lead', 300), S_('ganymede', 'in', 'lead', 300),
+        S_('ganymede', 'out', 'lead', 100), S_('ganymede', 'in', 'lead', 1000)], final: { enc: 'out', alt: 100, kind: 'ell' } } }
+  ];
+
+  let plan = defaultPlan();
+  let sim = null, hasRun = false, selStep = 0, viewMode = 'moons';
+  let anim = null, lastTs = 0, saved = [];
+  try { saved = JSON.parse(localStorage.getItem('europa_saved') || '[]'); } catch (e) { saved = []; }
+
+  // ---------- вычисления ----------
+  function recompute() {
+    sim = P.simulate(plan);
+    if (selStep >= sim.steps.length) selStep = Math.max(0, sim.steps.length - 1);
+    updateInfos();
+    renderResult();
+    draw();
+  }
+  function planChanged() { hasRun = false; recompute(); }
+
+  // ---------- построение интерфейса ----------
+  function buildStart() {
+    const box = $('startList');
+    box.innerHTML = '';
+    P.START_ORBITS.forEach(function (s) {
+      const b = document.createElement('button');
+      b.className = s.id === plan.start ? 'on' : '';
+      b.innerHTML = '<b>' + s.name + '</b><br><span class="note">' + s.rp + ' × ' + s.ra + ' RJ</span>';
+      b.onclick = function () { plan.start = s.id; buildStart(); planChanged(); };
+      box.appendChild(b);
+    });
+    const so = P.START_ORBITS.filter(function (s) { return s.id === plan.start; })[0];
+    const a = (so.rp + so.ra) / 2 * RJ;
+    const period = 2 * Math.PI * Math.sqrt(a * a * a / P.MU_J) / 86400;
+    $('startInfo').textContent = so.info + ' Период ≈ ' + fx(period, 0) + ' сут.';
+  }
+
+  function optButtons(i, key, values, labels, current) {
+    return values.map(function (v) {
+      return '<button class="opt ' + (v === current ? 'on' : '') + '" data-act="' + key + '" data-i="' + i +
+        '" data-v="' + v + '">' + labels[v] + '</button>';
+    }).join('');
+  }
+
+  function buildSteps() {
+    const box = $('steps');
+    box.innerHTML = '';
+    plan.steps.forEach(function (st, i) {
+      const moon = P.MOON_BY_ID[st.moon];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'step-' + i;
+      let moonBtns = P.MOONS.map(function (m) {
+        return '<button class="opt ' + (m.id === st.moon ? 'on' : '') + '" data-act="moon" data-i="' + i +
+          '" data-v="' + m.id + '"><span class="dot" style="background:' + m.color + '"></span>' + m.name + '</button>';
+      }).join('');
+      card.innerHTML =
+        '<div class="head"><b>Пролёт ' + (i + 1) + ': ' + moon.name + '</b>' +
+        '<button class="btn small" data-act="up" data-i="' + i + '" ' + (i === 0 ? 'disabled' : '') + ' aria-label="Выше">▲</button>' +
+        '<button class="btn small" data-act="down" data-i="' + i + '" ' + (i === plan.steps.length - 1 ? 'disabled' : '') + ' aria-label="Ниже">▼</button>' +
+        '<button class="btn small" data-act="del" data-i="' + i + '" aria-label="Удалить">✕</button></div>' +
+        '<div class="lbl">Спутник</div><div class="opts">' + moonBtns + '</div>' +
+        '<div class="lbl">Где встреча с орбитой спутника</div><div class="opts">' +
+          optButtons(i, 'enc', ['in', 'out'], ENC_LABEL, st.enc) + '</div>' +
+        '<div class="lbl">С какой стороны пролёт</div><div class="opts">' +
+          ['trail', 'lead'].map(function (sd) {
+            return '<button class="opt ' + (st.side === sd ? 'on' : '') + '" data-act="side" data-i="' + i +
+              '" data-v="' + sd + '">' + SIDE_LABEL[sd] + '<span class="sub" id="sidesub-' + i + '-' + sd + '">—</span></button>';
+          }).join('') + '</div>' +
+        '<div class="lbl">Высота пролёта: <b id="altv-' + i + '">' + st.alt + '</b> км</div>' +
+        '<input type="range" min="' + S.MIN_ALT + '" max="' + S.MAX_ALT + '" step="5" value="' + st.alt +
+          '" data-act="alt" data-i="' + i + '">' +
+        '<div class="res" id="res-' + i + '"></div>';
+      box.appendChild(card);
+    });
+    $('btnAdd').disabled = plan.steps.length >= S.MAX_STEPS;
+    $('btnAdd').textContent = plan.steps.length >= S.MAX_STEPS ? 'Достигнут максимум пролётов' : '+ Добавить пролёт';
+  }
+
+  function buildFinal() {
+    const f = plan.final;
+    $('finalCard').innerHTML =
+      '<div class="head"><b><span class="dot" style="background:' + P.MOON_BY_ID.europa.color + '"></span>Европа: торможение и захват</b></div>' +
+      '<div class="lbl">Где встреча</div><div class="opts">' + optButtons(0, 'fenc', ['in', 'out'], ENC_LABEL, f.enc) + '</div>' +
+      '<div class="lbl">Орбита захвата</div><div class="opts">' + optButtons(0, 'fkind', ['ell', 'circ'], KIND_LABEL, f.kind) + '</div>' +
+      '<div class="lbl">Высота перицентра: <b id="faltv">' + f.alt + '</b> км</div>' +
+      '<input type="range" min="' + S.MIN_ALT + '" max="1000" step="5" value="' + f.alt + '" data-act="falt">' +
+      '<div class="res" id="res-final"></div>';
+  }
+
+  function updateInfos() {
+    plan.steps.forEach(function (st, i) {
+      const card = $('step-' + i); if (!card) return;
+      const rec = sim.steps[i] && !sim.steps[i].isFinal ? sim.steps[i] : null;
+      const res = $('res-' + i);
+      const failHere = sim.fail && sim.failStep === i;
+      card.classList.toggle('bad', !!failHere);
+      ['trail', 'lead'].forEach(function (sd) {
+        const el = $('sidesub-' + i + '-' + sd);
+        if (!el) return;
+        el.textContent = rec && rec.options ? 'скорость ' + (rec.options[sd] >= 0 ? '+' : '') + fx(rec.options[sd], 2) + ' км/с' : '—';
+      });
+      if (rec) {
+        let t = '<b>День ' + fx(rec.day, 0) + '</b> · v∞ = <b>' + fx(rec.vinf, 2) + '</b> км/с · поворот <b>' + fx(rec.turnDeg, 1) + '°</b><br>' +
+          'Скорость относительно Юпитера: ' + fx(rec.vBefore, 2) + ' → <b>' + fx(rec.vAfter, 2) + '</b> км/с (' +
+          (rec.dSpeed >= 0 ? '+' : '') + fx(rec.dSpeed, 2) + ')';
+        if (rec.orbAfter) t += '<br>Новая орбита: ' + fx(rec.orbAfter.rp / RJ, 1) + '–' + fx(rec.orbAfter.ra / RJ, 1) + ' RJ, период ' + fx(rec.orbAfter.period, 0) + ' сут.';
+        if (failHere) t += '<br><span class="err">' + FAIL_TITLE[sim.fail.code] + '</span>';
+        res.innerHTML = t;
+      } else if (failHere) {
+        res.innerHTML = '<span class="err">Орбита ' + fx(sim.fail.rp / RJ, 1) + '–' + fx(sim.fail.ra / RJ, 1) +
+          ' RJ не пересекает орбиту «' + sim.fail.moon.name + '» (' + fx(sim.fail.moon.rRJ, 1) + ' RJ).</span>';
+      } else {
+        res.innerHTML = '<span class="err">Недостижимо: сломался предыдущий шаг.</span>';
+      }
+    });
+    const fr = $('res-final'), fa = $('faltv');
+    if (fa) fa.textContent = plan.final.alt;
+    plan.steps.forEach(function (st, i) { const el = $('altv-' + i); if (el) el.textContent = st.alt; });
+    if (sim.captured) {
+      const e = sim.eoi;
+      fr.innerHTML = 'День <b>' + fx(sim.totals.days, 0) + '</b> · v∞ у Европы = <b>' + fx(e.vinf, 2) +
+        '</b> км/с<br>Скорость в перицентре гиперболы ' + fx(e.vHyp, 2) + ' → орбита ' + fx(e.vOrb, 2) +
+        ' км/с<br>Тормозной импульс: <b>' + fx(e.dv, 2) + ' км/с</b>';
+    } else if (sim.fail && sim.failStep === plan.steps.length) {
+      fr.innerHTML = '<span class="err">Орбита ' + fx(sim.fail.rp / RJ, 1) + '–' + fx(sim.fail.ra / RJ, 1) +
+        ' RJ не доходит до орбиты Европы (' + fx(P.MOON_BY_ID.europa.rRJ, 1) + ' RJ). Нужны пролёты, опускающие перицентр.</span>';
+    } else {
+      fr.innerHTML = '<span class="err">Недостижимо из-за ошибки выше.</span>';
+    }
+  }
+
+  // ---------- вкладка «Итог» ----------
+  function bar(label, c, unit, d) {
+    const frac = Math.min(1, c.value / c.limit);
+    return '<div class="crit"><div>' + label + ': <b>' + fx(c.value, d) + '</b> / ' + c.limit + ' ' + unit +
+      ' <span class="' + (c.pass ? 'ok' : 'err') + '">' + (c.pass ? '✓' : '✗') + '</span></div>' +
+      '<div class="bar"><i class="' + (c.value > c.limit ? 'over' : '') + '" style="width:' + (frac * 100) + '%"></i></div></div>';
+  }
+  function verdictOf(r) {
+    if (r.success) return '<span class="ok">Успех: Европа достигнута в рамках всех критериев</span>';
+    if (r.captured) return '<span class="warn" style="color:var(--warn)">Захват есть, но критерии нарушены</span>';
+    return '<span class="err">' + (r.fail ? FAIL_TITLE[r.fail.code] : 'Цель не достигнута') + '</span>';
+  }
+
+  function renderResult() {
+    const r = sim, box = $('resultBox');
+    let h = '<p class="note">' + (hasRun ? 'Итог моделирования' : 'Прогноз по текущим параметрам (нажмите «Запустить», чтобы увидеть полёт)') + '</p>';
+    h += '<div class="verdict">' + verdictOf(r) + '</div>';
+    h += '<div class="score">' + r.score + '<span class="note"> / 100 очков</span></div>';
+    h += bar('Топливо Δv', r.criteria.dv, 'км/с', 2) + bar('Радиация', r.criteria.dose, 'крад', 0) + bar('Время', r.criteria.days, 'сут.', 0);
+    h += '<p class="note">Δv = ' + fx(r.totals.dvTrim, 2) + ' (коррекции фазы) + ' + fx(r.totals.dvEOI, 2) + ' (торможение у Европы). ' +
+      'Очки: 45% запас по Δv, 30% по радиации, 25% по времени; без захвата — 0, при нарушении критериев — ×0,4.</p>';
+    if (r.hints.length) h += '<h2>Что улучшить</h2>' + r.hints.map(function (t) { return '<p class="note">• ' + t + '</p>'; }).join('');
+    if (r.steps.length) {
+      h += '<h2>Шаги</h2><div class="tablewrap"><table><tr><th>№</th><th>Тело</th><th>День</th><th>Выс., км</th><th>v∞</th><th>Поворот</th><th>Скорость до→после</th><th>Орбита после, RJ</th></tr>';
+      r.steps.forEach(function (s, i) {
+        h += '<tr data-sel="' + i + '"><td>' + (s.isFinal ? 'Е' : (i + 1)) + '</td><td>' + s.moon.name + '</td><td>' + fx(s.day, 0) + '</td><td>' + s.alt + '</td><td>' +
+          fx(s.vinf, 2) + '</td><td>' + (s.isFinal ? '—' : fx(s.turnDeg, 1) + '°') + '</td><td>' +
+          (s.isFinal ? 'торможение ' + fx(s.capture.dv, 2) : fx(s.vBefore, 2) + ' → ' + fx(s.vAfter, 2)) + '</td><td>' +
+          (s.orbAfter ? fx(s.orbAfter.rp / RJ, 1) + '–' + fx(s.orbAfter.ra / RJ, 1) : '—') + '</td></tr>';
+      });
+      h += '</table></div>';
+      h += '<h2>Векторы пролёта</h2><div id="diagSel" class="opts"></div><canvas id="diag" class="diag"></canvas>' +
+        '<p class="note">Серый — скорость спутника, синий — скорость КА до пролёта, зелёный — после (относительно Юпитера). ' +
+        'Штриховые — скорость относительно спутника v∞: по модулю не меняется, но поворачивается.</p>';
+    }
+    box.innerHTML = h;
+    const sel = $('diagSel');
+    if (sel) {
+      r.steps.forEach(function (s, i) {
+        if (s.isFinal) return;
+        const b = document.createElement('button');
+        b.className = 'opt ' + (i === selStep ? 'on' : '');
+        b.textContent = (i + 1) + '. ' + s.moon.name;
+        b.onclick = function () { selStep = i; renderResult(); };
+        sel.appendChild(b);
+      });
+      const rec = r.steps[selStep];
+      if (rec && !rec.isFinal) drawDiagram($('diag'), rec); else if ($('diag')) $('diag').style.display = 'none';
+    }
+  }
+
+  function drawDiagram(cv, rec) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, hgt = cv.clientHeight;
+    cv.width = w * dpr; cv.height = hgt * dpr;
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, hgt);
+    const V = rec.vec.V, ang = Math.PI / 2 - Math.atan2(V[1], V[0]);
+    function rot(v) { const c = Math.cos(ang), s = Math.sin(ang); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c]; }
+    const vm = rot(V), vi = rot(rec.vec.vIn), vo = rot(rec.vec.vOut);
+    const maxLen = Math.max(Math.hypot(vm[0], vm[1]), Math.hypot(vi[0], vi[1]), Math.hypot(vo[0], vo[1]));
+    const sc = Math.min(w, hgt) * 0.42 / maxLen;
+    const ox = w / 2, oy = hgt / 2 + 20;
+    function P2(v) { return [ox + v[0] * sc, oy - v[1] * sc]; }
+    function arrow(a, b, col, dash, label) {
+      g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 2; g.setLineDash(dash || []);
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.setLineDash([]);
+      const t = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      g.beginPath(); g.moveTo(b[0], b[1]);
+      g.lineTo(b[0] - 9 * Math.cos(t - 0.4), b[1] - 9 * Math.sin(t - 0.4));
+      g.lineTo(b[0] - 9 * Math.cos(t + 0.4), b[1] - 9 * Math.sin(t + 0.4)); g.fill();
+      if (label) { g.font = '11px sans-serif'; g.fillText(label, b[0] + 5, b[1] - 4); }
+    }
+    const o = [ox, oy], tipV = P2(vm);
+    arrow(o, tipV, '#9aa6d6', [], 'V спутн.');
+    arrow(o, P2(vi), '#4da3ff', [], 'до ' + fx(rec.vBefore, 1));
+    arrow(o, P2(vo), '#4ade80', [], 'после ' + fx(rec.vAfter, 1));
+    arrow(tipV, P2(vi), '#4da3ff', [4, 3]);
+    arrow(tipV, P2(vo), '#4ade80', [4, 3]);
+    g.fillStyle = '#e8ecff'; g.font = '12px sans-serif';
+    g.fillText('поворот ' + fx(rec.turnDeg, 1) + '°, v∞ = ' + fx(rec.vinf, 2) + ' км/с', 8, 16);
+  }
+
+  // ---------- сравнение маршрутов ----------
+  function summarize(name, p, r) {
+    return { name: name, plan: clone(p), flybys: r.totals.flybys, dv: r.totals.dv, dose: r.totals.dose,
+             days: r.totals.days, score: r.score, captured: r.captured, success: r.success,
+             fail: r.fail ? FAIL_TITLE[r.fail.code] : '' };
+  }
+  function saveRoute(name) {
+    saved.push(summarize(name || ('Маршрут ' + (saved.length + 1)), plan, sim));
+    persist(); renderCompare();
+  }
+  function persist() { try { localStorage.setItem('europa_saved', JSON.stringify(saved)); } catch (e) { /* нет доступа */ } }
+
+  function renderCompare() {
+    const box = $('compareBox');
+    if (!saved.length) { box.innerHTML = '<p class="note">Пока пусто.</p>'; return; }
+    const ok = saved.filter(function (s) { return s.captured; });
+    function best(key, low) {
+      if (!ok.length) return null;
+      return ok.reduce(function (a, b) { return (low ? b[key] < a[key] : b[key] > a[key]) ? b : a; })[key];
+    }
+    const bdv = best('dv', true), bdose = best('dose', true), bdays = best('days', true), bsc = best('score', false);
+    let h = '<div class="tablewrap"><table><tr><th>Маршрут</th><th>Пролётов</th><th>Δv</th><th>Доза</th><th>Сутки</th><th>Очки</th><th>Итог</th><th></th></tr>';
+    saved.forEach(function (s, i) {
+      function c(v, b, d) { return '<td class="' + (s.captured && v === b ? 'best' : '') + '">' + (s.captured ? fx(v, d) : '—') + '</td>'; }
+      h += '<tr><td>' + s.name + '</td><td>' + s.flybys + '</td>' + c(s.dv, bdv, 2) + c(s.dose, bdose, 0) + c(s.days, bdays, 0) + c(s.score, bsc, 0) +
+        '<td>' + (s.success ? '<span class="ok">успех</span>' : (s.captured ? 'нарушены критерии' : '<span class="err">' + (s.fail || 'нет') + '</span>')) + '</td>' +
+        '<td><button class="btn small" data-load="' + i + '">Открыть</button> <button class="btn small" data-rm="' + i + '">✕</button></td></tr>';
+    });
+    h += '</table></div><p class="note">Зелёным выделено лучшее значение в каждом столбце среди маршрутов, достигших Европы.</p>';
+    box.innerHTML = h;
+  }
+
+  // ---------- правила ----------
+  function renderHelp() {
+    $('helpBox').innerHTML =
+      '<h2>Цель</h2><p>Довести зонд до Европы и захватить его на её орбиту, уложившись в бюджет топлива (Δv ≤ ' + L.dv + ' км/с), ' +
+      'дозу радиации (≤ ' + L.dose + ' крад) и время (≤ ' + L.days + ' суток).</p>' +
+      '<h2>Как играть</h2><ul>' +
+      '<li>Выберите стартовую орбиту.</li>' +
+      '<li>Составьте цепочку пролётов: спутник, сторона, высота. Порядок меняют кнопки ▲▼.</li>' +
+      '<li>Для каждого шага сразу видно v∞, поворот, скорость до/после и новую орбиту.</li>' +
+      '<li>«Запустить» — анимация полёта, затем итог. «Сохранить» на вкладке «Сравнение» — для сопоставления вариантов.</li></ul>' +
+      '<h2>Как это работает</h2><ul>' +
+      '<li><b>Пролёт сзади</b> спутника обычно разгоняет аппарат, <b>спереди</b> — тормозит. Игра показывает точные числа.</li>' +
+      '<li><b>Низкий пролёт</b> сильнее поворачивает v∞ и меняет скорость больше.</li>' +
+      '<li>Чтобы встретить Европу на малой скорости, нужно «опустить» орбиту до радиуса Европы (9,4 RJ), снизив энергию пролётами у Ганимеда и Каллисто.</li>' +
+      '<li>Радиация растёт ближе к Юпитеру: Ио опаснее Европы, Ганимед и Каллисто почти безопасны.</li></ul>' +
+      '<h2>Допущения модели</h2><p class="note">Плоская задача; круговые орбиты спутников; метод сопряжённых конических сечений. ' +
+      'Фазу спутника подгоняют малыми коррекциями — за каждую встречу списывается ' + S.TRIM_DV + ' км/с. Радиация — условная модель, экспоненциально растущая к Юпитеру.</p>';
+  }
+
+  // ---------- рисование ----------
+  const cv = $('view'), ctx = cv.getContext('2d');
+  let W = 300;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = cv.clientWidth || 300;
+    cv.width = W * dpr; cv.height = cv.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+    if (sim) renderResultDiag();
+  }
+  function renderResultDiag() { const d = $('diag'); if (d && sim.steps[selStep] && !sim.steps[selStep].isFinal) drawDiagram(d, sim.steps[selStep]); }
+
+  function maxRadius() {
+    if (viewMode === 'moons') return 30 * RJ;
+    let m = 30 * RJ;
+    sim.legs.forEach(function (l) { m = Math.max(m, l.orb.ra); });
+    return m * 1.08;
+  }
+
+  function draw() {
+    if (!sim) return;
+    const H = cv.clientHeight || W;
+    ctx.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, sc = (Math.min(W, H) / 2 * 0.93) / maxRadius();
+    function X(x) { return cx + x * sc; }
+    function Y(y) { return cy - y * sc; }
+
+    // орбиты спутников
+    P.MOONS.forEach(function (m) {
+      ctx.strokeStyle = m.color + '66'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.arc(cx, cy, m.a * sc, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    });
+    // Юпитер
+    const jr = Math.max(7, RJ * sc);
+    const gr = ctx.createRadialGradient(cx - jr * 0.3, cy - jr * 0.3, 1, cx, cy, jr);
+    gr.addColorStop(0, '#f0c9a0'); gr.addColorStop(1, '#a8683a');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, jr, 0, 7); ctx.fill();
+
+    // запланированная траектория (прогноз)
+    const paths = P.samplePath(sim, 240);
+    ctx.lineWidth = 1.5;
+    paths.forEach(function (pts) {
+      ctx.strokeStyle = anim ? '#4da3ff44' : '#4da3ffcc'; ctx.beginPath();
+      pts.forEach(function (p, i) { if (i) ctx.lineTo(X(p[0]), Y(p[1])); else ctx.moveTo(X(p[0]), Y(p[1])); });
+      ctx.stroke();
+    });
+    // пройденная часть
+    let cur = null;
+    if (anim && sim.legs.length) {
+      const li = anim.li, leg = sim.legs[li];
+      ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 2.5;
+      for (let k = 0; k <= li; k++) {
+        const lg = sim.legs[k], uu = k < li ? 1 : anim.u, n = 90;
+        ctx.beginPath();
+        for (let j = 0; j <= n; j++) {
+          const p = P.stateAtTime(sim, lg.t0 + (lg.t1 - lg.t0) * uu * j / n);
+          if (j) ctx.lineTo(X(p.x), Y(p.y)); else ctx.moveTo(X(p.x), Y(p.y));
+        }
+        ctx.stroke();
+      }
+      cur = P.stateAtTime(sim, leg.t0 + (leg.t1 - leg.t0) * anim.u);
+    }
+    // метки встреч
+    sim.steps.forEach(function (s, i) {
+      const x = X(s.moon.a * Math.cos(s.phi)), y = Y(s.moon.a * Math.sin(s.phi));
+      ctx.strokeStyle = s.moon.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.stroke();
+      ctx.fillStyle = '#e8ecff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(s.isFinal ? 'Е' : String(i + 1), x, y + 0.5);
+    });
+    // спутники
+    const tAbs = anim ? (sim.legs[anim.li].t0 + (sim.legs[anim.li].t1 - sim.legs[anim.li].t0) * anim.u) : 0;
+    P.MOONS.forEach(function (m, idx) {
+      let ang = -0.6 + idx * 1.6;
+      if (anim) {
+        const li = anim.li, leg = sim.legs[li];
+        ang = m.n * tAbs * 86400 + idx;
+        if (li > 0 && sim.steps[li - 1].moon === m) ang = sim.steps[li - 1].phi + m.n * (tAbs - leg.t0) * 86400;
+        if (leg.moon === m) ang = sim.steps[li].phi - m.n * (leg.t1 - tAbs) * 86400;
+      }
+      const x = X(m.a * Math.cos(ang)), y = Y(m.a * Math.sin(ang));
+      ctx.fillStyle = m.color; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
+      ctx.fillStyle = '#c8d0f5'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(m.name, x + 8, y - 6);
+    });
+    // зонд
+    if (cur) {
+      ctx.fillStyle = '#fff'; ctx.shadowColor = '#7dd3fc'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(X(cur.x), Y(cur.y), 4.5, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    }
+    updateHud(cur);
+  }
+
+  function updateHud(cur) {
+    const hud = $('hud');
+    if (anim && cur) {
+      const li = anim.li, leg = sim.legs[li];
+      let dose = 0;
+      for (let k = 0; k < li; k++) dose += sim.steps[k].legDose;
+      if (sim.steps[li]) dose += sim.steps[li].legDose * anim.u;
+      const arrived = anim.u >= 1 ? 1 : 0;
+      let dv = S.TRIM_DV * (li + arrived);
+      if (arrived && sim.steps[li] && sim.steps[li].isFinal) dv += sim.steps[li].capture.dv;
+      hud.innerHTML = 'День ' + fx(leg.t0 + (leg.t1 - leg.t0) * anim.u, 0) + '<br>r = ' + fx(cur.r / RJ, 1) + ' RJ · v = ' + fx(cur.speed, 1) +
+        ' км/с<br>доза ' + fx(dose, 0) + ' крад · Δv ' + fx(dv, 2) + ' км/с';
+    } else {
+      hud.innerHTML = 'Прогноз: ' + fx(sim.totals.days, 0) + ' сут · Δv ' + fx(sim.totals.dv, 2) + ' · ' + fx(sim.totals.dose, 0) + ' крад';
+    }
+  }
+
+  // ---------- анимация ----------
+  function addLog(t) { const d = document.createElement('div'); d.textContent = t; $('log').prepend(d); }
+
+  function startRun() {
+    stopRun(true);
+    hasRun = true;
+    $('log').innerHTML = '';
+    switchTab('plan');
+    if (!sim.legs.length) { renderResult(); showOutcome(); return; }
+    const n = sim.legs.length, T = sim.totals.days, total = 70 / Number($('speed').value) + 4;
+    const dur = sim.legs.map(function (l) { return total * (0.5 * (l.t1 - l.t0) / T + 0.5 / n); });
+    anim = { li: 0, u: 0, pause: 0, dur: dur, wait: false };
+    addLog('Старт: орбита ' + P.START_ORBITS.filter(function (s) { return s.id === plan.start; })[0].name);
+    $('btnRun').disabled = true; $('btnStop').disabled = false;
+    lastTs = performance.now();
+    requestAnimationFrame(tick);
+  }
+  function stopRun(silent) {
+    anim = null; $('btnRun').disabled = false; $('btnStop').disabled = true;
+    if (!silent) draw();
+  }
+  function tick(ts) {
+    if (!anim) return;
+    const dt = Math.min(0.05, (ts - lastTs) / 1000); lastTs = ts;
+    if (anim.pause > 0) {
+      anim.pause -= dt;
+      if (anim.pause <= 0) {
+        if (anim.li >= sim.legs.length - 1) { finishRun(); return; }
+        anim.li++; anim.u = 0;
+      }
+    } else {
+      anim.u += dt / anim.dur[anim.li];
+      if (anim.u >= 1) {
+        anim.u = 1;
+        const rec = sim.steps[anim.li];
+        if (rec) {
+          if (rec.isFinal) addLog('День ' + fx(rec.day, 0) + ': Европа, v∞ ' + fx(rec.vinf, 2) + ' км/с, торможение ' + fx(rec.capture.dv, 2) + ' км/с');
+          else addLog('День ' + fx(rec.day, 0) + ': ' + rec.moon.name + ', выс. ' + rec.alt + ' км, v∞ ' + fx(rec.vinf, 2) +
+            ', скорость ' + fx(rec.vBefore, 2) + ' → ' + fx(rec.vAfter, 2) + ' км/с');
+          if (!rec.isFinal) selStep = anim.li;
+        }
+        anim.pause = anim.li >= sim.legs.length - 1 ? 0.9 : 1.1;
+      }
+    }
+    draw();
+    if (anim) requestAnimationFrame(tick);
+  }
+  function finishRun() {
+    anim = null; $('btnRun').disabled = false; $('btnStop').disabled = true;
+    draw(); renderResult(); showOutcome();
+  }
+
+  // ---------- окна ----------
+  function showModal(html) { $('modalCard').innerHTML = html; $('modal').classList.remove('hidden'); }
+  function hideModal() { $('modal').classList.add('hidden'); }
+
+  function showOutcome() {
+    const r = sim;
+    let h = '<h2>' + (r.success ? '🎉 Миссия выполнена' : (r.captured ? 'Захват есть, но…' : 'Миссия не удалась')) + '</h2>';
+    h += '<div class="verdict">' + verdictOf(r) + '</div><div class="score">' + r.score + '<span class="note"> / 100</span></div>';
+    h += bar('Топливо Δv', r.criteria.dv, 'км/с', 2) + bar('Радиация', r.criteria.dose, 'крад', 0) + bar('Время', r.criteria.days, 'сут.', 0);
+    if (r.hints.length) h += '<ul>' + r.hints.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+    h += '<div class="row"><button class="btn primary" id="mAgain">Играть заново</button><button class="btn" id="mEdit">Изменить маршрут</button></div>' +
+      '<div class="row"><button class="btn" id="mSave">В сравнение</button></div>';
+    showModal(h);
+    $('mAgain').onclick = restart;
+    $('mEdit').onclick = function () { hideModal(); switchTab('plan'); };
+    $('mSave').onclick = function () { saveRoute(); $('mSave').disabled = true; $('mSave').textContent = 'Сохранено'; };
+  }
+
+  function showIntro() {
+    showModal('<h2>Курс на Европу</h2>' +
+      '<p><b>Цель:</b> захватить зонд на орбиту Европы, потратив мало топлива, получив небольшую дозу радиации и быстро.</p>' +
+      '<p><b>Управление:</b> выбирайте стартовую орбиту и цепочку пролётов у спутников Юпитера (спутник, сторона, высота), затем нажмите «Запустить». ' +
+      'Пролёт у спутника бесплатно меняет скорость и орбиту — это гравитационный манёвр.</p>' +
+      '<p><b>Результат:</b> очки от 0 до 100 и три критерия: Δv ≤ ' + L.dv + ' км/с, доза ≤ ' + L.dose + ' крад, время ≤ ' + L.days + ' сут.</p>' +
+      '<div class="row"><button class="btn primary" id="mStart">Начать</button></div>');
+    $('mStart').onclick = hideModal;
+  }
+
+  function restart() {
+    stopRun(true); plan = defaultPlan(); hasRun = false; selStep = 0;
+    $('log').innerHTML = ''; hideModal();
+    buildStart(); buildSteps(); buildFinal(); recompute(); switchTab('plan');
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === name); });
+    document.querySelectorAll('.tabpage').forEach(function (p) { p.classList.toggle('active', p.id === 'tab-' + name); });
+    if (name === 'result') renderResult();
+  }
+
+  // ---------- события ----------
+  function moveStep(i, d) {
+    const j = i + d; if (j < 0 || j >= plan.steps.length) return;
+    const t = plan.steps[i]; plan.steps[i] = plan.steps[j]; plan.steps[j] = t;
+  }
+  function onClick(e) {
+    const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
+    const i = Number(b.dataset.i), v = b.dataset.v;
+    switch (b.dataset.act) {
+      case 'moon': plan.steps[i].moon = v; break;
+      case 'enc': plan.steps[i].enc = v; break;
+      case 'side': plan.steps[i].side = v; break;
+      case 'del': plan.steps.splice(i, 1); break;
+      case 'up': moveStep(i, -1); break;
+      case 'down': moveStep(i, 1); break;
+      case 'fenc': plan.final.enc = v; break;
+      case 'fkind': plan.final.kind = v; break;
+      default: return;
+    }
+    buildSteps(); buildFinal(); planChanged();
+  }
+  function onInput(e) {
+    const el = e.target; if (el.tagName !== 'INPUT') return;
+    const act = el.dataset.act;
+    if (act === 'alt') plan.steps[Number(el.dataset.i)].alt = Number(el.value);
+    else if (act === 'falt') plan.final.alt = Number(el.value);
+    else return;
+    planChanged();
+  }
+
+  function init() {
+    $('goalBar').innerHTML = 'Цель: захват у <b>Европы</b> · Δv ≤ <b>' + L.dv + '</b> км/с · доза ≤ <b>' + L.dose + '</b> крад · ≤ <b>' + L.days + '</b> сут.';
+    $('steps').addEventListener('click', onClick); $('finalCard').addEventListener('click', onClick);
+    $('steps').addEventListener('input', onInput); $('finalCard').addEventListener('input', onInput);
+    $('btnAdd').onclick = function () {
+      if (plan.steps.length >= S.MAX_STEPS) return;
+      plan.steps.push({ moon: 'ganymede', enc: 'in', side: 'lead', alt: 300 });
+      buildSteps(); planChanged();
+    };
+    $('btnRun').onclick = startRun; $('btnStop').onclick = function () { stopRun(); };
+    $('btnReset').onclick = restart;
+    $('btnView').onclick = function () {
+      viewMode = viewMode === 'moons' ? 'full' : 'moons';
+      $('btnView').textContent = 'Вид: ' + (viewMode === 'moons' ? 'спутники' : 'вся орбита'); draw();
+    };
+    $('btnPresets').onclick = function () { $('presetBox').classList.toggle('hidden'); };
+    const pb = $('presetBox');
+    PRESETS.forEach(function (p) {
+      const b = document.createElement('button'); b.className = 'opt';
+      b.innerHTML = '<b>' + p.name + '</b><span class="sub">' + p.desc + '</span>';
+      b.onclick = function () {
+        plan = clone(p.plan); buildStart(); buildSteps(); buildFinal(); planChanged(); pb.classList.add('hidden');
+      };
+      pb.appendChild(b);
+    });
+    document.querySelectorAll('.tab').forEach(function (t) { t.onclick = function () { switchTab(t.dataset.tab); }; });
+    $('btnSave').onclick = function () { saveRoute(); };
+    $('compareBox').addEventListener('click', function (e) {
+      const l = e.target.closest('[data-load]'), r = e.target.closest('[data-rm]');
+      if (l) { plan = clone(saved[Number(l.dataset.load)].plan); buildStart(); buildSteps(); buildFinal(); planChanged(); switchTab('plan'); }
+      if (r) { saved.splice(Number(r.dataset.rm), 1); persist(); renderCompare(); }
+    });
+    $('resultBox').addEventListener('click', function (e) {
+      const tr = e.target.closest('tr[data-sel]');
+      if (tr && sim.steps[Number(tr.dataset.sel)] && !sim.steps[Number(tr.dataset.sel)].isFinal) { selStep = Number(tr.dataset.sel); renderResult(); }
+    });
+    window.addEventListener('resize', resize);
+    renderHelp(); renderCompare();
+    buildStart(); buildSteps(); buildFinal();
+    recompute(); resize();
+    showIntro();
+  }
+  init();
+})();
+
+</script>
+</body>
+</html>
